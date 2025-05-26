@@ -6,50 +6,54 @@ import {
   FormControl,
   FormLabel,
   Input,
-  InputGroup,
-  InputRightElement,
   Button,
   Alert,
+  FormErrorMessage,
   Text,
+  InputGroup,
+  InputRightElement,
+  Link,
 } from "@chakra-ui/react";
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // Import biểu tượng từ react-icons
 import { useFormik } from "formik";
 import validationSchema from "./validations";
-import { fetcRegister } from "../../../api";
+import { fetchLogin } from "../../../api";
 import { useAuth } from "../../../contexts/AuthContext";
+import { Link as RouterLink } from "react-router-dom"; // Import RouterLink từ react-router-dom : npm install react-router-dom
 
-function Signup({ history }) {
+import { useNavigate } from "react-router-dom";
+
+function Signin({ history }) {
   const { login } = useAuth();
+  const [showErrorIndicator, setShowErrorIndicator] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-
-  const handlePasswordVisibility = () => setShowPassword(!showPassword);
-  const handlePasswordConfirmVisibility = () =>
-    setShowPasswordConfirm(!showPasswordConfirm);
+  const navigate = useNavigate(); // hook thay cho history
 
   const formik = useFormik({
     initialValues: {
       email: "",
       password: "",
-      passwordConfirm: "",
     },
     validationSchema,
     onSubmit: async (values, bag) => {
-      // Kiểm tra nếu form có lỗi
-      const errors = await bag.validateForm(values);
-      if (Object.keys(errors).length > 0) {
-        bag.setErrors({ general: "Please fill in all required fields correctly." });
-        return;
+      if (!values.email || !values.password) {
+        setShowErrorIndicator(true);
+      } else {
+        setShowErrorIndicator(false);
       }
 
       try {
-        const registerResponse = await fetcRegister({
+        const loginResponse = await fetchLogin({
           email: values.email,
           password: values.password,
         });
-        login(registerResponse);
-        history.push("/profile");
+        login(loginResponse);
+        // history.push("/profile");
+        
+        navigate("/"); // chuyển hướng về trang home
+
       } catch (e) {
-        bag.setErrors({ general: e.response?.data?.message || "Registration failed." });
+        bag.setErrors({ general: e.response.data.message });
       }
     },
   });
@@ -59,7 +63,7 @@ function Signup({ history }) {
       <Flex align="center" width="full" justifyContent="center">
         <Box pt={10}>
           <Box textAlign="center">
-            <Heading>Sign Up</Heading>
+            <Heading>Sign In</Heading>
           </Box>
           <Box my={5}>
             {formik.errors.general && (
@@ -69,25 +73,32 @@ function Signup({ history }) {
           <Box my={5} textAlign="left">
             <form onSubmit={formik.handleSubmit}>
               <FormControl isInvalid={formik.touched.email && formik.errors.email}>
-                <FormLabel>E-mail</FormLabel>
+                <FormLabel>
+                  E-mail
+                  {showErrorIndicator && !formik.values.email && (
+                    <Text as="span" color="red.500">
+                      *
+                    </Text>
+                  )}
+                </FormLabel>
                 <Input
                   name="email"
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   value={formik.values.email}
                 />
-                {formik.touched.email && formik.errors.email && (
-                  <Text color="red.500" mt={1}>
-                    {formik.errors.email}
-                  </Text>
-                )}
+                <FormErrorMessage>{formik.errors.email}</FormErrorMessage>
               </FormControl>
 
-              <FormControl
-                mt="4"
-                isInvalid={formik.touched.password && formik.errors.password}
-              >
-                <FormLabel>Password</FormLabel>
+              <FormControl mt="4" isInvalid={formik.touched.password && formik.errors.password}>
+                <FormLabel>
+                  Password
+                  {showErrorIndicator && !formik.values.password && (
+                    <Text as="span" color="red.500">
+                      *
+                    </Text>
+                  )}
+                </FormLabel>
                 <InputGroup>
                   <Input
                     name="password"
@@ -97,53 +108,31 @@ function Signup({ history }) {
                     value={formik.values.password}
                   />
                   <InputRightElement width="4.5rem">
-                    <Button h="1.75rem" size="sm" onClick={handlePasswordVisibility}>
-                      {showPassword ? "😑" : "👁"}
+                    <Button
+                      h="2rem"
+                      w="2rem"
+                      p={0}
+                      borderRadius="full"
+                      bg="gray.200"
+                      _hover={{ bg: "gray.300" }}
+                      _active={{ bg: "gray.400" }}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <FaEyeSlash /> : <FaEye />}
                     </Button>
                   </InputRightElement>
                 </InputGroup>
-                {formik.touched.password && formik.errors.password && (
-                  <Text color="red.500" mt={1}>
-                    {formik.errors.password}
-                  </Text>
-                )}
+                <FormErrorMessage>{formik.errors.password}</FormErrorMessage>
               </FormControl>
 
-              <FormControl
-                mt="4"
-                isInvalid={
-                  formik.touched.passwordConfirm && formik.errors.passwordConfirm
-                }
-              >
-                <FormLabel>Password Confirm</FormLabel>
-                <InputGroup>
-                  <Input
-                    name="passwordConfirm"
-                    type={showPasswordConfirm ? "text" : "password"}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
-                    value={formik.values.passwordConfirm}
-                  />
-                  <InputRightElement width="4.5rem">
-                    <Button
-                      h="1.75rem"
-                      size="sm"
-                      onClick={handlePasswordConfirmVisibility}
-                    >
-                      {showPasswordConfirm ? "😑" : "👁"}
-                    </Button>
-                  </InputRightElement>
-                </InputGroup>
-                {formik.touched.passwordConfirm &&
-                  formik.errors.passwordConfirm && (
-                    <Text color="red.500" mt={1}>
-                      {formik.errors.passwordConfirm}
-                    </Text>
-                  )}
-              </FormControl>
+              <Box mt={2} textAlign="right">
+                <Link as={RouterLink} to="/forgot-password" color="teal.500">
+                  Quên mật khẩu?
+                </Link>
+              </Box>
 
               <Button mt="4" width="full" type="submit">
-                Sign Up
+                Sign In
               </Button>
             </form>
           </Box>
@@ -153,4 +142,4 @@ function Signup({ history }) {
   );
 }
 
-export default Signup;
+export default Signin;
